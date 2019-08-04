@@ -1,11 +1,3 @@
-"""
-Train a simple RNN model for Inclusive Flavour Tagging using track information.
-- Using DataGenerator class to stream data to the GPU, to avoid storing loads of data in RAM
-- No transformations on data are done in this part now - these are all done per-batch in DataGenerator
-"""
-
-__author__ = "Daniel O'Hanlon <daniel.ohanlon@cern.ch>"
-
 from sklearn.metrics import roc_auc_score, roc_curve
 
 import matplotlib as mpl
@@ -16,19 +8,13 @@ import matplotlib.ticker as plticker
 
 import keras
 from keras.callbacks import TerminateOnNaN, TensorBoard, EarlyStopping
-from keras.optimizers import Adam, SGD
+from keras.optimizers import Adam
 
 from pprint import pprint
 
 # FIX ME
 import sys
 sys.path.append('../')
-
-from utils.utils import decision_and_mistag, saveModel, exportForCalibration
-from utils.plotUtils import makeTrainingPlots
-
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from softReco import SoftRecoLayer, Attention
 
@@ -50,9 +36,7 @@ def swish(x):
 get_custom_objects().update({'swish': Swish(swish)})
 # ------------------------------------------------------------
 
-import shelve
-
-from dataGeneratorK import createSplitGenerators
+from dataGenerator import createSplitGenerators
 
 def tagNetworkSoftReco(trackShape):
 
@@ -341,16 +325,13 @@ TRACK_SHAPE = (100, 18) # nTracks, nFeatures
 
 nTrackCategories = 4
 
-# model = tagNetworkSoftReco(TRACK_SHAPE)
-# model = tagNetworkNewAttnW(TRACK_SHAPE)
 model = tagNetworkNewSoftReco3(TRACK_SHAPE)
 model.summary(line_length = 200)
 
 pprint(model.get_config())
 
-# adam = Adam(lr = 1E-2, amsgrad = True, clipvalue = 5.0)
-adam = keras.optimizers.Nadam(lr = 1E-3, clipvalue = 5.0)
-# adam = SGD(lr = 1E-3)
+adam = Adam(lr = 1E-2, amsgrad = True, clipvalue = 5.0)
+
 earlyStopping = EarlyStopping(patience = 100)
 
 model.compile(optimizer = adam, loss = 'binary_crossentropy', metrics=['accuracy'])
@@ -390,19 +371,7 @@ generatorOptions = {
 
 }
 
-# tb = TensorBoard(log_dir='logsTest/softReco8', histogram_freq = 1, write_grads = True, batch_size = 2 ** 12)
-
-# inputFiles = ['/Users/MBP/GoogleDrive/ftag/DTT_MC2016_Reco16Strip26_Down_DIMUON_Bu2JpsiK.h5',
-#               '/Users/MBP/GoogleDrive/ftag/DTT_MC2016_Reco16Strip26_Down_DIMUON_Bu2JpsiK_copy.h5']
-
 inputFiles = '/home/dan/ftData/DTT_MC2015_Reco15aStrip24_DIMUON_Bd2JpsiKstar.h5'
-
-# dataGeneratorTrain = DataGenerator(inputFiles, dataset = 'train', **generatorOptions)
-#
-# # Probably don't need a generator for these, but we might as well
-# # Although validation slows down training, so if this is small perhaps we can hold it in RAM
-# dataGeneratorValidation = DataGenerator(inputFiles, dataset = 'validation', **generatorOptions)
-# dataGeneratorTest = DataGenerator(inputFiles, dataset = 'test', **generatorOptions)
 
 genTrain, genValidation, genTest = createSplitGenerators(inputFiles,
                                                          generatorOptions,
