@@ -5,22 +5,6 @@ from keras.layers import Layer
 import tensorflow as tf
 
 from keras import backend as K
-from keras.utils.generic_utils import get_custom_objects
-
-# ------------------------------------------------------------
-# needs to be defined as activation class otherwise error
-# AttributeError: 'Activation' object has no attribute '__name__'
-class Swish(keras.layers.Activation):
-
-    def __init__(self, activation, **kwargs):
-        super(Swish, self).__init__(activation, **kwargs)
-        self.__name__ = 'swish'
-
-def relu(x):
-    return (K.sigmoid(x) * x)
-
-get_custom_objects().update({'swish': Swish(relu)})
-# ------------------------------------------------------------
 
 class Attention(Layer):
     def __init__(self, units):
@@ -38,12 +22,9 @@ class Attention(Layer):
         # just build these here and request input_shape
         # and output_shape
 
-        # self.W1 = keras.layers.Dense(self.units, activation = 'relu', kernel_regularizer = keras.regularizers.l1(10.0))
-        # self.W2 = keras.layers.Dense(self.units, activation = 'relu', kernel_regularizer = keras.regularizers.l1(10.0))
-        self.W1 = keras.layers.Dense(self.units, activation = 'sigmoid', use_bias = True)#, activity_regularizer = keras.regularizers.l1(0.001))
-        self.W2 = keras.layers.Dense(self.units, activation = 'sigmoid', use_bias = True)#, activity_regularizer = keras.regularizers.l1(0.001))
-        self.V = keras.layers.Dense(1, activation = 'sigmoid', use_bias = True)
-        # self.V = keras.layers.Dense(1, activation = None, activity_regularizer = keras.regularizers.l1(0.01))
+        self.W1 = keras.layers.Dense(self.units, activation = 'relu', use_bias = True)
+        self.W2 = keras.layers.Dense(self.units, activation = 'relu', use_bias = True)
+        self.V = keras.layers.Dense(1, activation = None, use_bias = True)
 
         super(Attention, self).build(input_shape)
 
@@ -64,7 +45,7 @@ class Attention(Layer):
 
     def count_params(self):
         # A placeholder
-        return 1337
+        return 42
 
     def call(self, input):
         query, values = input
@@ -127,9 +108,6 @@ class SoftRecoLayer(Layer):
 
         restFrame4Vectors = self.calculateWeightedRestFrames(attention_weights, fourVectorInputs)
 
-        # Take the first vector to be the rest frame
-        # restFrame4Vectors = fourVectorInputs[:,0,:]
-
         # restFrame4Vectors = K.print_tensor(restFrame4Vectors, 'restFrame4Vectors')
 
         boosts = self.calculateBoosts(restFrame4Vectors)
@@ -153,7 +131,7 @@ class SoftRecoLayer(Layer):
 
     def calculateBoosts(self, restFrame4Vector):
 
-        # First element (slice to maintain dimension)
+        # First element (slice to maintain last axis)
         E = restFrame4Vector[:,:1]
 
         # Last three elements
@@ -199,8 +177,6 @@ def testAttention():
     tracks, hidden = keras.layers.GRU(3, activation = 'relu', return_state = True, return_sequences = True)(tracks)
     context_vector, attention_weights = Attention(128)([hidden, tracks])
 
-    # x = keras.layers.Reshape((10,))(attention_weights)
-
     out = keras.layers.Dense(1)(context_vector)
 
     model = keras.models.Model(inputs = inputs, outputs = out)
@@ -223,10 +199,6 @@ def testReco():
 
     tracks, hidden = keras.layers.GRU(1, activation = 'relu', return_state = True, return_sequences = True)(inputFeaturesMasked)
     attention_outputs, attention_weights, fourVectorOutputs = SoftRecoLayer(32)([hidden, tracks, inputFourVectorsMasked])
-
-    # x = keras.layers.Reshape((100,))(attention_weights)
-
-    # x = keras.layers.Flatten()(fourVectorOutputs)
 
     tracks = keras.layers.Concatenate()([tracks, fourVectorOutputs])
 
