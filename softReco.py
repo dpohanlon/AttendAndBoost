@@ -131,6 +131,8 @@ class SoftRecoLayer(Layer):
 
     def calculateBoosts(self, restFrame4Vector):
 
+        # Uses the same formulation as arXiv:1812.09722
+
         # First element (slice to maintain last axis)
         E = restFrame4Vector[:,:1]
 
